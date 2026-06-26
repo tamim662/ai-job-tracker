@@ -18,6 +18,8 @@ Everything flows from job search through to interview prep in a single pipeline:
 
 I built this initially for myself, but it can genuinely help anyone who is looking for a job in Australia and wants a proper job tracking system running on their own machine. You can download the repo and follow the setup instructions along with the required API keys. I tried to use free APIs from different AI tools for most tasks — Groq for ATS scanning, Adzuna and Tavily for job search and research — with Claude API being the only one that requires token cost, used specifically for generating the writing and outreach content.
 
+<video src="https://github.com/tamim662/ai-job-tracker/raw/main/ai-job-tacker.mp4" controls width="100%"></video>
+
 ---
 
 ## Features
