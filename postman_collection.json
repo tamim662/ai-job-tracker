@@ -1,0 +1,619 @@
+{
+  "info": {
+    "name": "AI Job Tracker",
+    "description": "Complete API collection for the AI Job Tracker — a personal self-hosted job search assistant for the Australian market.\n\n**How to use:**\n1. Set the `baseUrl` variable to `http://localhost:8080` (already set)\n2. Run the **Login** request first — the token is automatically saved to the `token` collection variable\n3. All other requests use `{{token}}` automatically — no manual copy/paste needed\n\n**Variable reference:**\n- `{{baseUrl}}` — backend base URL\n- `{{token}}` — JWT token (auto-set by Login)\n- `{{jobId}}` — set this after creating a job",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "resumeId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "coverLetterId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    console.log('Token saved to collection variable.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"changeme\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Authenticate with your credentials. The JWT token is automatically saved to the `token` collection variable — all subsequent requests use it without any manual copy/paste."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Public endpoint — no authentication required. Returns {\"status\": \"UP\"} when the backend is running."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            },
+            "description": "Returns the single user profile. A default empty profile is created automatically on first call."
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+61 400 123 456\",\n  \"linkedinUrl\": \"https://linkedin.com/in/janesmith\",\n  \"githubUrl\": \"https://github.com/janesmith\",\n  \"targetRoles\": \"Senior Java Developer, Backend Engineer, Software Engineer\",\n  \"preferredLocations\": \"Sydney, Melbourne, Remote\",\n  \"visaNote\": \"Australian Permanent Resident — no sponsorship required\",\n  \"salaryExpectation\": \"130,000 – 160,000 AUD\",\n  \"availability\": \"2 weeks notice\",\n  \"defaultHrEmail\": \"Subject: [Role] Application — Jane Smith\\n\\nDear Hiring Manager,\\n\\nI am a senior Java developer with 7 years of experience building scalable Spring Boot microservices. I came across the [Role] position at [Company] and believe my background in distributed systems and cloud-native architecture would be a strong fit.\\n\\nI would love the opportunity to discuss how I can contribute to your team. Would you be open to a brief call this week?\\n\\nBest regards,\\nJane Smith\\nhttps://linkedin.com/in/janesmith\",\n  \"defaultLinkedinMessage\": \"Hi, I noticed the [Role] opening at [Company] — your work on [specific thing] really caught my attention. Would love to connect and learn more about the team.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            },
+            "description": "Update all profile fields. defaultHrEmail and defaultLinkedinMessage are used by Claude as base templates when generating outreach messages — adapted per job, not rewritten from scratch."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resumes",
+      "item": [
+        {
+          "name": "Upload Resume",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a PDF or DOCX file from your machine"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resumes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resumes"]
+            },
+            "description": "Upload a resume (PDF or DOCX, max 20MB). If a resume already exists it is automatically deleted and replaced. Text is parsed and stored for ATS matching and keyword scoring."
+          }
+        },
+        {
+          "name": "List Resumes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/resumes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resumes"]
+            },
+            "description": "Returns a list with at most one resume (single-file policy). Use the id from the response as resumeId when running an ATS match."
+          }
+        },
+        {
+          "name": "Delete Resume",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/resumes/{{resumeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resumes", "{{resumeId}}"]
+            },
+            "description": "Permanently deletes the resume record and the file from S3. Set resumeId collection variable to the resume ID first."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cover Letters",
+      "item": [
+        {
+          "name": "Upload Cover Letter",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a PDF or DOCX file from your machine"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cover-letters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cover-letters"]
+            },
+            "description": "Upload a base cover letter (PDF or DOCX, max 20MB). If one already exists it is automatically replaced. Claude uses this as a template when generating job-specific cover letters."
+          }
+        },
+        {
+          "name": "List Cover Letters",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cover-letters",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cover-letters"]
+            },
+            "description": "Returns a list with at most one cover letter (single-file policy)."
+          }
+        },
+        {
+          "name": "Delete Cover Letter",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cover-letters/{{coverLetterId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cover-letters", "{{coverLetterId}}"]
+            },
+            "description": "Permanently deletes the cover letter record and the file from S3."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Create Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('jobId', json.id);",
+                  "    console.log('jobId saved: ' + json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Senior Java Developer\",\n  \"company\": \"Atlassian\",\n  \"location\": \"Sydney, NSW\",\n  \"description\": \"We are looking for a Senior Java Developer to join our platform team. You will design and build high-throughput microservices using Spring Boot, Kafka, and PostgreSQL. Experience with cloud-native architecture on AWS is highly valued. Strong knowledge of Java 17+, Docker, and Kubernetes required.\",\n  \"jobUrl\": \"https://www.atlassian.com/company/careers\",\n  \"platform\": \"LinkedIn\",\n  \"salary\": \"140,000 – 170,000 AUD\",\n  \"jobType\": \"Full-time\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs"]
+            },
+            "description": "Save a job manually. The job ID is automatically saved to the jobId collection variable for use in subsequent requests."
+          }
+        },
+        {
+          "name": "List All Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs"]
+            },
+            "description": "Returns all saved jobs with their current application status, ATS scores, and metadata."
+          }
+        },
+        {
+          "name": "Get Job by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}"]
+            },
+            "description": "Returns a single job by ID."
+          }
+        },
+        {
+          "name": "Update Job",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Senior Java Developer\",\n  \"company\": \"Atlassian\",\n  \"location\": \"Sydney, NSW\",\n  \"description\": \"Updated job description with additional details about the role and team structure.\",\n  \"jobUrl\": \"https://www.atlassian.com/company/careers\",\n  \"platform\": \"LinkedIn\",\n  \"salary\": \"150,000 – 180,000 AUD\",\n  \"jobType\": \"Full-time\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}"]
+            },
+            "description": "Update job details. Does not affect application status — use the Update Status endpoint for that."
+          }
+        },
+        {
+          "name": "Update Job Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPLIED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "status"]
+            },
+            "description": "Manually update the application status for a job.\n\nValid values: SAVED, RESUME_MATCHED, READY_TO_APPLY, APPLIED, HR_CONTACTED, INTERVIEW_SCHEDULED, INTERVIEW_DONE, OFFER, REJECTED, CLOSED"
+          }
+        },
+        {
+          "name": "Delete Job",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}"]
+            },
+            "description": "Permanently deletes the job and all associated records (ATS matches, messages, company research)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Job Search",
+      "item": [
+        {
+          "name": "Search Jobs — keyword only",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-search?what=java developer&results=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job-search"],
+              "query": [
+                { "key": "what", "value": "java developer" },
+                { "key": "results", "value": "20" }
+              ]
+            },
+            "description": "Search Australian job listings via Adzuna. Each result includes a keyword match % (matchScore) scored against your uploaded resume."
+          }
+        },
+        {
+          "name": "Search Jobs — keyword + location",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-search?what=software engineer&where=sydney&results=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job-search"],
+              "query": [
+                { "key": "what", "value": "software engineer" },
+                { "key": "where", "value": "sydney" },
+                { "key": "results", "value": "10" }
+              ]
+            },
+            "description": "Search with both keyword and location filters. where accepts city names like sydney, melbourne, brisbane, perth."
+          }
+        },
+        {
+          "name": "Search Jobs — max results",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-search?what=python developer&where=melbourne&results=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job-search"],
+              "query": [
+                { "key": "what", "value": "python developer" },
+                { "key": "where", "value": "melbourne" },
+                { "key": "results", "value": "50" }
+              ]
+            },
+            "description": "Maximum 50 results per request (capped server-side)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "ATS Match",
+      "item": [
+        {
+          "name": "Run ATS Match",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resumeId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/match",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "match"]
+            },
+            "description": "Run a full ATS analysis for a job using a specific resume. Uses Groq (Llama 3.3 70B) to compare the resume against the job description.\n\nReturns: atsScore (0-100), matchedSkills, missingSkills, suggestedSummary, suggestedSkills, suggestedExperience.\n\nAlso automatically updates job status to RESUME_MATCHED."
+          }
+        },
+        {
+          "name": "Get Latest ATS Match",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/match",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "match"]
+            },
+            "description": "Retrieve the most recent ATS match result for a job without running a new scan."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Generate HR Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"HR_EMAIL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "messages"]
+            },
+            "description": "Generate a cold outreach email to the hiring manager via Claude. If a default HR email template is saved in your profile, Claude adapts it for this specific job rather than writing from scratch. Output includes a Subject line followed by the email body."
+          }
+        },
+        {
+          "name": "Generate LinkedIn Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LINKEDIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "messages"]
+            },
+            "description": "Generate a LinkedIn connection request message (max 280 characters) via Claude. If a default LinkedIn template is saved in your profile, Claude adapts it for this job."
+          }
+        },
+        {
+          "name": "Generate Follow-up Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"FOLLOWUP\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "messages"]
+            },
+            "description": "Generate a polite follow-up email to send after submitting an application. Includes a subject line, brief recap, reaffirmed interest, and a status update request. Kept to 100-150 words."
+          }
+        },
+        {
+          "name": "Generate Cover Letter",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"COVER_LETTER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "messages"]
+            },
+            "description": "Generate a tailored cover letter via Claude. If a base cover letter is uploaded, Claude edits it for this specific job — preserving your visa status, personal tone, and writing style. If no base cover letter exists, Claude writes one from scratch using your profile and job details."
+          }
+        },
+        {
+          "name": "List All Messages for Job",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "messages"]
+            },
+            "description": "Returns all previously generated messages for a job (HR emails, LinkedIn messages, follow-ups, cover letters) ordered by most recent first."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company Research",
+      "item": [
+        {
+          "name": "Run Company Research",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/research",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "research"]
+            },
+            "description": "Run company research via Tavily (live web search) + Claude synthesis. Produces a structured briefing covering what the company does, tech stack, culture, recent news, and interview tips. Result is saved to the database — running again replaces the previous result."
+          }
+        },
+        {
+          "name": "Get Latest Company Research",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}/research",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "{{jobId}}", "research"]
+            },
+            "description": "Retrieve the most recent company research briefing for a job without running a new search."
+          }
+        }
+      ]
+    }
+  ]
+}

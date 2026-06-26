@@ -1,0 +1,22 @@
+# Environment — never commit real credentials
+.env
+
+# Backend build output
+backend/target/
+backend/.idea/
+backend/*.iml
+
+# Frontend build output
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code internal
+.claude/
+
+# Misc
+*.log
+To run the app.txt
