@@ -1,14 +1,22 @@
 # AI Job Tracker
 
-Looking for a job is exhausting — not because there aren't enough jobs, but because the process around applying is just a lot of repetitive work. Every application needs a slightly different cover letter, a slightly different email to the hiring manager, and if you get to the interview stage you suddenly need to research the company from scratch.
+Looking for a job is exhausting, not because there aren't enough jobs, but because the process around applying is just a lot of repetitive work. Every application needs a slightly different cover letter, a slightly different email to the hiring manager, and if you get to the interview stage you suddenly need to research the company from scratch.
 
 This is a personal, self-hosted tool I built to handle that entire process in one place, specifically for the Australian job market.
 
-The idea is simple: **you bring your own resume and cover letter**. The app does not write them for you from scratch — and it shouldn't, because a generic AI-written CV will get you nowhere. You take the time to write a proper resume and cover letter yourself, upload them once, and from that point the AI works *from your material*, not instead of it. When you want a cover letter for a specific job, it reads the one you uploaded and rewrites it for that role — keeping your voice, your experience, your structure. Same for HR emails and LinkedIn messages: you save a default template in your profile, and for each job it adapts your template rather than hallucinating a new one from nothing.
+The idea is simple: **you bring your own resume and cover letter**. The app does not write them for you from scratch, and it shouldn't, because a generic AI-written CV will get you nowhere. You take the time to write a proper resume and cover letter yourself, upload them once, and from that point the AI works *from your material*, not instead of it. When you want a cover letter for a specific job, it reads the one you uploaded and rewrites it for that role, keeping your voice, your experience, your structure. Same for HR emails and LinkedIn messages: you save a default template in your profile, and for each job it adapts your template rather than hallucinating a new one from nothing.
 
-Everything flows from job search through to interview prep in a single pipeline. Search Australian job listings across Adzuna and Tavily (Seek, LinkedIn, Indeed, Jora) and get an instant ATS match score against your resume for every result. Click "Want to Apply" and an automatic ATS deep scan runs via Groq / Llama 3.3 70B, then you choose your path: contact the hiring manager with an HR email or LinkedIn message adapted from your template, or apply directly with a cover letter generated from your uploaded base. Every application is tracked through the hiring pipeline, and when you land an interview a one-click company research briefing via Tavily and Claude gives you what they do, their tech stack, culture, recent news, and things to ask.
+Everything flows from job search through to interview prep in a single pipeline:
 
-No SaaS subscription. No data sent anywhere beyond the APIs you configure. You run it, you own it.
+- Search Australian job listings (Adzuna + Tavily web search across Seek, LinkedIn, Indeed, Jora)
+- Get an instant ATS match score against your resume for every result
+- Click "Want to Apply" and an automatic ATS deep scan runs (Groq / Llama 3.3 70B), then choose your path
+- Contact the hiring manager with an HR email or LinkedIn message adapted from your template
+- Apply directly with a cover letter generated from your uploaded base, or skip
+- Track every application through the hiring pipeline
+- When you land an interview, a one-click company research briefing via Tavily and Claude covers what they do, their tech stack, culture, recent news, and things to ask
+
+I built this initially for myself, but it can genuinely help anyone who is looking for a job in Australia and wants a proper job tracking system running on their own machine. You can download the repo and follow the setup instructions along with the required API keys. I tried to use free APIs from different AI tools for most tasks — Groq for ATS scanning, Adzuna and Tavily for job search and research — with Claude API being the only one that requires token cost, used specifically for generating the writing and outreach content.
 
 ---
 
