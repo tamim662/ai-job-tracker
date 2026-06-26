@@ -6,15 +6,7 @@ This is a personal, self-hosted tool I built to handle that entire process in on
 
 The idea is simple: **you bring your own resume and cover letter**. The app does not write them for you from scratch — and it shouldn't, because a generic AI-written CV will get you nowhere. You take the time to write a proper resume and cover letter yourself, upload them once, and from that point the AI works *from your material*, not instead of it. When you want a cover letter for a specific job, it reads the one you uploaded and rewrites it for that role — keeping your voice, your experience, your structure. Same for HR emails and LinkedIn messages: you save a default template in your profile, and for each job it adapts your template rather than hallucinating a new one from nothing.
 
-Everything flows from job search through to interview prep in a single pipeline:
-
-- Search Australian job listings (Adzuna + Tavily web search across Seek, LinkedIn, Indeed, Jora)
-- Get an instant ATS match score against your resume for every result
-- Click "Want to Apply" → automatic ATS deep scan (Groq / Llama 3.3 70B) → choose your path
-- Contact the hiring manager (HR email or LinkedIn, adapted from your template)
-- Apply directly (cover letter generated from your uploaded base, or skip)
-- Track every application through the hiring pipeline
-- When you land an interview: one-click company research briefing (Tavily + Claude) — what they do, tech stack, culture, recent news, things to ask
+Everything flows from job search through to interview prep in a single pipeline. Search Australian job listings across Adzuna and Tavily (Seek, LinkedIn, Indeed, Jora) and get an instant ATS match score against your resume for every result. Click "Want to Apply" and an automatic ATS deep scan runs via Groq / Llama 3.3 70B, then you choose your path: contact the hiring manager with an HR email or LinkedIn message adapted from your template, or apply directly with a cover letter generated from your uploaded base. Every application is tracked through the hiring pipeline, and when you land an interview a one-click company research briefing via Tavily and Claude gives you what they do, their tech stack, culture, recent news, and things to ask.
 
 No SaaS subscription. No data sent anywhere beyond the APIs you configure. You run it, you own it.
 
