@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import ApplyModal from '../components/ApplyModal'
 import api from '../api/axios'
@@ -191,20 +192,29 @@ const MESSAGE_TYPES = [
   { type: 'COVER_LETTER', label: 'Cover Letter' },
 ]
 
+const TEMPLATE_LABELS = {
+  HR_EMAIL: { field: 'defaultHrEmail', name: 'HR email template' },
+  LINKEDIN: { field: 'defaultLinkedinMessage', name: 'LinkedIn InMail template' },
+}
+
 function MessagesSection({ jobId }) {
   const [messages, setMessages] = useState([])
   const [generating, setGenerating] = useState(null)
   const [error, setError] = useState(null)
   const [loaded, setLoaded] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [templateWarn, setTemplateWarn] = useState(null)
 
   useEffect(() => {
     api.get(`/api/jobs/${jobId}/messages`)
       .then(r => { setMessages(r.data); setLoaded(true) })
       .catch(() => setLoaded(true))
+    api.get('/api/profile').then(r => setProfile(r.data)).catch(() => {})
   }, [jobId])
 
-  const handleGenerate = async (type) => {
+  const doGenerate = async (type) => {
+    setTemplateWarn(null)
     setGenerating(type); setError(null)
     try {
       const r = await api.post(`/api/jobs/${jobId}/messages`, { type })
@@ -212,6 +222,15 @@ function MessagesSection({ jobId }) {
     } catch (e) {
       setError(e.response?.data?.error || 'Generation failed. Please try again.')
     } finally { setGenerating(null) }
+  }
+
+  const handleGenerate = (type) => {
+    const meta = TEMPLATE_LABELS[type]
+    if (meta && !profile?.[meta.field]?.trim()) {
+      setTemplateWarn(type)
+      return
+    }
+    doGenerate(type)
   }
 
   const handleCopy = (id, content) => {
@@ -233,6 +252,28 @@ function MessagesSection({ jobId }) {
           </button>
         ))}
       </div>
+      {templateWarn && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+          <p className="text-xs text-amber-800">
+            <span className="font-semibold">No {TEMPLATE_LABELS[templateWarn].name} saved.</span>{' '}
+            Add one in your Profile so AI Tracker can adapt your style for each job.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link to="/profile"
+              className="px-2.5 py-1 bg-amber-600 text-white text-xs font-medium rounded-md hover:bg-amber-700 transition-colors">
+              Go to Profile →
+            </Link>
+            <button onClick={() => doGenerate(templateWarn)}
+              className="px-2.5 py-1 border border-amber-300 text-amber-700 text-xs font-medium rounded-md hover:bg-amber-100 transition-colors">
+              Generate anyway
+            </button>
+            <button onClick={() => setTemplateWarn(null)}
+              className="text-xs text-amber-500 hover:text-amber-700 transition-colors">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
       {loaded && messages.length > 0 && (
         <div className="space-y-3">

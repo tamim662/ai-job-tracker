@@ -113,14 +113,16 @@ public class MessageGenerationService {
                     - Include a subject line starting with "Subject: "
                     - Keep the body to 150-200 words maximum
                     - Be genuine, professional, and direct — no filler phrases
-                    - End with a clear call to action""";
+                    - End with a clear call to action
+                    - IMPORTANT: Always write the complete email. If any candidate details are missing, use square bracket placeholders like [Your Name], [Your Background] — never ask for more information or refuse to write""";
             case "LINKEDIN" -> """
                     Write a LinkedIn InMail message.
                     If a base LinkedIn InMail template is provided, adapt it for this specific job — preserve the candidate's voice, structure, and tone. Only update the role, company, and relevant context.
                     If no template is provided, write one fresh. Either way:
                     - Reference the specific role and company
                     - Be genuine, professional, and specific — do NOT start with "Hi" or "Hello" alone
-                    - Match the length and style of the provided template naturally""";
+                    - Match the length and style of the provided template naturally
+                    - IMPORTANT: Always write the complete message. If any candidate details are missing, use square bracket placeholders like [Your Name], [Your Background], [Specific Achievement] — never ask for more information or refuse to write""";
             case "FOLLOWUP" -> """
                     Write a polite follow-up email after submitting an application. Include:
                     - Subject line starting with "Subject: "

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../api/axios'
 
 function ScoreBadge({ score }) {
@@ -23,8 +24,11 @@ export default function ApplyModal({ job, onClose, onApplied }) {
   const [genError, setGenError] = useState(null)
   const [markingApplied, setMarkingApplied] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [profile, setProfile] = useState(null)
+  const [templateWarn, setTemplateWarn] = useState(null)
 
   useEffect(() => {
+    api.get('/api/profile').then(r => setProfile(r.data)).catch(() => {})
     api.get('/api/resumes')
       .then(r => {
         const resume = r.data[0]
@@ -45,7 +49,11 @@ export default function ApplyModal({ job, onClose, onApplied }) {
       })
   }, [job.id])
 
-  const handleGenerate = async (type) => {
+  const TEMPLATE_FIELDS = { HR_EMAIL: 'defaultHrEmail', LINKEDIN: 'defaultLinkedinMessage' }
+  const TEMPLATE_NAMES = { HR_EMAIL: 'HR email template', LINKEDIN: 'LinkedIn InMail template' }
+
+  const doGenerate = async (type) => {
+    setTemplateWarn(null)
     setGenerating(true)
     setGenError(null)
     try {
@@ -56,6 +64,15 @@ export default function ApplyModal({ job, onClose, onApplied }) {
     } finally {
       setGenerating(false)
     }
+  }
+
+  const handleGenerate = (type) => {
+    const field = TEMPLATE_FIELDS[type]
+    if (field && !profile?.[field]?.trim()) {
+      setTemplateWarn(type)
+      return
+    }
+    doGenerate(type)
   }
 
   const handleMarkApplied = async () => {
@@ -171,7 +188,30 @@ export default function ApplyModal({ job, onClose, onApplied }) {
                 <h3 className="text-sm font-semibold text-gray-700">Contact Hiring Manager</h3>
               </div>
 
-              {!generated && (
+              {templateWarn && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+                  <p className="text-xs text-amber-800">
+                    <span className="font-semibold">No {TEMPLATE_NAMES[templateWarn]} saved.</span>{' '}
+                    Add one in your Profile so AI Tracker can adapt your style for each job.
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Link to="/profile" onClick={onClose}
+                      className="px-2.5 py-1 bg-amber-600 text-white text-xs font-medium rounded-md hover:bg-amber-700 transition-colors">
+                      Go to Profile →
+                    </Link>
+                    <button onClick={() => doGenerate(templateWarn)}
+                      className="px-2.5 py-1 border border-amber-300 text-amber-700 text-xs font-medium rounded-md hover:bg-amber-100 transition-colors">
+                      Generate anyway
+                    </button>
+                    <button onClick={() => setTemplateWarn(null)}
+                      className="text-xs text-amber-500 hover:text-amber-700 transition-colors">
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!generated && !templateWarn && (
                 <div className="flex gap-3">
                   <button onClick={() => handleGenerate('HR_EMAIL')} disabled={generating}
                     className="flex-1 py-3 rounded-xl border-2 border-purple-200 bg-white hover:bg-purple-50 text-sm font-medium text-purple-700 disabled:opacity-50 transition-colors">
