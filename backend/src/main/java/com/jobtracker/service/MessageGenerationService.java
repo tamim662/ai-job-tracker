@@ -23,7 +23,7 @@ public class MessageGenerationService {
 
     private static final String SYSTEM_PROMPT = """
             You are a professional job application assistant specialising in the Australian job market. \
-            Write concise, personalised outreach messages and cover letters. Be genuine, professional, and direct. \
+            Write personalised outreach messages and cover letters. Be genuine, professional, and direct. \
             Never use generic templates or filler phrases like "I hope this email finds you well". \
             Use Australian English spelling.""";
 
