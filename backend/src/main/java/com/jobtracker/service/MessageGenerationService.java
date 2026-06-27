@@ -95,7 +95,7 @@ public class MessageGenerationService {
         if (baseTemplate != null && !baseTemplate.isBlank()) {
             String label = switch (type) {
                 case "HR_EMAIL" -> "BASE HR EMAIL TEMPLATE (adapt this for the specific job — do not rewrite from scratch)";
-                case "LINKEDIN" -> "BASE LINKEDIN MESSAGE TEMPLATE (adapt this for the specific job — do not rewrite from scratch)";
+                case "LINKEDIN" -> "BASE LINKEDIN INMAIL TEMPLATE (adapt this for the specific job — do not rewrite from scratch)";
                 default -> "BASE COVER LETTER (edit this — do not rewrite from scratch)";
             };
             sb.append("\n").append(label).append(":\n").append(baseTemplate);
@@ -115,12 +115,12 @@ public class MessageGenerationService {
                     - Be genuine, professional, and direct — no filler phrases
                     - End with a clear call to action""";
             case "LINKEDIN" -> """
-                    Write a LinkedIn connection request message.
-                    If a base LinkedIn message template is provided, adapt it for this specific job — preserve the candidate's voice, only update the role and company references.
+                    Write a LinkedIn InMail message.
+                    If a base LinkedIn InMail template is provided, adapt it for this specific job — preserve the candidate's voice, structure, and tone. Only update the role, company, and relevant context.
                     If no template is provided, write one fresh. Either way:
-                    - Maximum 280 characters total
                     - Reference the specific role and company
-                    - Be genuine and specific — do NOT start with "Hi" or "Hello" alone""";
+                    - Be genuine, professional, and specific — do NOT start with "Hi" or "Hello" alone
+                    - Match the length and style of the provided template naturally""";
             case "FOLLOWUP" -> """
                     Write a polite follow-up email after submitting an application. Include:
                     - Subject line starting with "Subject: "

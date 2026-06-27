@@ -28,10 +28,10 @@ const TEMPLATES = [
   },
   {
     key: 'defaultLinkedinMessage',
-    label: 'Default LinkedIn Message Template',
-    placeholder: "Write your default LinkedIn connection message here. Claude will adapt it per job.\n\nExample: Came across your posting for [role] at [company] — your work on X caught my attention. I'd love to connect and learn more about the team.",
+    label: 'Default LinkedIn InMail Template',
+    placeholder: "Write your default LinkedIn InMail here. Claude will adapt it per job.\n\nExample: I came across your posting for [role] at [company] and wanted to reach out directly. Your work on X really caught my attention, and I believe my background in Y aligns well with what you're looking for. I'd love to have a quick conversation if you're open to it.",
     rows: 4,
-    hint: 'Max 280 characters when sent. Claude will keep it within that limit.',
+    hint: 'Used as a base for InMail generation — Claude adapts your template for each specific job.',
   },
 ]
 
