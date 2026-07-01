@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -91,6 +92,9 @@ public class JobService {
         Application app = applicationRepository.findByJobId(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found for job: " + jobId));
         app.setStatus(status);
+        if ("APPLIED".equals(status) && app.getAppliedDate() == null) {
+            app.setAppliedDate(LocalDate.now());
+        }
         applicationRepository.save(app);
     }
 
@@ -125,7 +129,8 @@ public class JobService {
                 job.getClosingDate(),
                 job.getSavedDate(),
                 app != null ? app.getId() : null,
-                app != null ? app.getStatus() : null
+                app != null ? app.getStatus() : null,
+                app != null ? app.getAppliedDate() : null
         );
     }
 }

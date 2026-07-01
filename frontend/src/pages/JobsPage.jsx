@@ -791,6 +791,11 @@ export default function JobsPage() {
                             <p className="text-xs text-gray-500">
                               {[job.company, job.location, job.platform].filter(Boolean).join(' · ')}
                             </p>
+                            {job.appliedDate && (
+                              <p className="text-xs text-green-600 font-medium">
+                                Applied {new Date(job.appliedDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </p>
+                            )}
                           </div>
                           <span className="text-gray-400 text-xs mt-0.5 shrink-0">
                             {expandedId === job.id ? '▲' : '▼'}
@@ -814,7 +819,7 @@ export default function JobsPage() {
                                 )}
                               </div>
                               {job.description && (
-                                <p className="text-xs text-gray-500 whitespace-pre-wrap line-clamp-6">{job.description}</p>
+                                <p className="text-xs text-gray-500 whitespace-pre-wrap">{job.description}</p>
                               )}
 
                               {/* Status update */}

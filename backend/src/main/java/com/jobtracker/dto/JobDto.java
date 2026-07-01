@@ -17,5 +17,6 @@ public record JobDto(
         LocalDate closingDate,
         LocalDateTime savedDate,
         Long applicationId,
-        String applicationStatus
+        String applicationStatus,
+        LocalDate appliedDate
 ) {}
