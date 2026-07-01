@@ -12,5 +12,6 @@ public record CreateJobRequest(
         String salary,
         String jobType,
         LocalDate postedDate,
-        LocalDate closingDate
+        LocalDate closingDate,
+        String status
 ) {}

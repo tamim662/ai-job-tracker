@@ -35,9 +35,15 @@ public class JobService {
                 req.postedDate(), req.closingDate());
         job = jobRepository.save(job);
 
+        String initialStatus = (req.status() != null && VALID_STATUSES.contains(req.status()))
+                ? req.status() : "SAVED";
+
         Application app = new Application();
         app.setJobId(job.getId());
-        app.setStatus("SAVED");
+        app.setStatus(initialStatus);
+        if ("APPLIED".equals(initialStatus)) {
+            app.setAppliedDate(LocalDate.now());
+        }
         app = applicationRepository.save(app);
 
         return toDto(job, app);

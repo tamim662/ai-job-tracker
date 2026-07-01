@@ -25,7 +25,7 @@ const ALL_STATUSES = [
 const EMPTY_FORM = {
   title: '', company: '', location: '', platform: '',
   jobUrl: '', salary: '', jobType: '', description: '',
-  postedDate: '', closingDate: '',
+  postedDate: '', closingDate: '', status: 'SAVED',
 }
 
 function StatusBadge({ status }) {
@@ -89,6 +89,15 @@ function JobForm({ initial = EMPTY_FORM, onSave, onCancel, saving }) {
             />
           </div>
         ))}
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Application Status</label>
+        <select name="status" value={form.status} onChange={change}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          {ALL_STATUSES.map(s => (
+            <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
       </div>
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Job Description</label>
