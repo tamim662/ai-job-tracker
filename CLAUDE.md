@@ -63,6 +63,8 @@ Tests override all of these via `src/test/resources/application.properties` usin
 
 Stateless REST API, Spring Boot 3.3.4, Java 17 (compiled on 21). **68 tests passing.**
 
+**`.env` loading:** `JobTrackerApplication.main()` calls `loadDotEnv()` before Spring starts. Uses `dotenv-java` (`io.github.cdimascio:dotenv-java:3.0.0`) to find `.env` at `../` (project root relative to `backend/`). Sets missing keys as Java system properties so Spring resolves `${VAR}` placeholders correctly. OS environment variables always take precedence — so IntelliJ run configs and production env vars are never overridden. This means the backend works from both IntelliJ (green Run button) and the terminal without needing `export $(...)` first.
+
 **Auth flow:** `POST /api/auth/login` → `AuthController` → `AuthenticationManager` (in-memory single user) → returns JWT → client sends `Authorization: Bearer <token>` on every request → `JwtAuthFilter` validates and sets `SecurityContext`.
 
 Public endpoints: `/api/health`, `/api/auth/**`. Everything else requires a valid JWT.
@@ -100,7 +102,9 @@ util/         — KeywordMatcher (local keyword scoring, no API)
 
 **Single-file policy:** Uploading a new resume or cover letter auto-deletes the existing one (enforced in `ResumeService` and `CoverLetterService` via `findTopByOrderByCreatedAtDesc()`).
 
-**Message templates:** Profile stores `defaultHrEmail` and `defaultLinkedinMessage`. `MessageGenerationService` passes these as base templates to Claude when generating HR_EMAIL or LINKEDIN messages — Claude adapts them per job rather than writing from scratch. Same pattern as COVER_LETTER which uses the uploaded cover letter file.
+**Message templates:** Profile stores `defaultHrEmail` and `defaultLinkedinMessage`. `MessageGenerationService` passes these as base templates to Claude when generating HR_EMAIL or LINKEDIN messages — Claude adapts them per job rather than writing from scratch. Same pattern as COVER_LETTER which uses the uploaded cover letter file. If no template is set, generation still runs but uses `[placeholders]` for missing details — it never refuses or asks for more information.
+
+**Template warning (frontend):** Both `ApplyModal` and `MessagesSection` in `JobsPage` fetch the user profile on mount and check `defaultHrEmail` / `defaultLinkedinMessage` before generating. If the relevant template is missing, an amber warning banner appears with a link to `/profile` and a "Generate anyway" fallback. This check is in the frontend only — the backend always generates regardless.
 
 ### REST API Endpoints
 
@@ -126,6 +130,7 @@ util/         — KeywordMatcher (local keyword scoring, no API)
 - `RESUME_MATCHED` is set automatically after ATS match runs (no threshold — any completed scan sets it)
 - All other transitions are triggered by the user manually via the status dropdown in My Jobs
 - Company Research button appears when status reaches `INTERVIEW_SCHEDULED` or beyond
+- **Applied date:** `applications.applied_date` is stamped with `LocalDate.now()` whenever status transitions to `APPLIED` — either via `PUT /api/jobs/{id}/status` or at job creation if the initial status is `APPLIED`. Once set it is never overwritten. Returned in `JobDto.appliedDate` and shown as "Applied [date]" in green on the job card.
 
 ### Database Schema
 
@@ -167,28 +172,30 @@ navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })])
 **Pages/routes:**
 - `/` — Dashboard (live stats: total jobs, applied, interviews, offers; pipeline bar chart; recent jobs; quick actions; setup checklist)
 - `/jobs` — Jobs page with two tabs:
-  - **My Jobs** — saved/applied jobs with status badge, ATS score, expand for ATS results / messages / company research / status dropdown
+  - **My Jobs** — saved/applied jobs with status badge, ATS score, applied date (green, when set); click to expand for: job details (salary, type, description with See more/See less toggle), ATS results, outreach messages, company research, status dropdown
   - **Search Jobs** — Adzuna search (paginated, 10/page) + Web Results section (Tavily, browse-only)
 - `/resumes` — Single resume management (upload/replace/remove)
 - `/cover-letters` — Single cover letter management (upload/replace/remove)
-- `/profile` — User profile including default HR email and LinkedIn message templates
+- `/profile` — User profile including default HR email and LinkedIn InMail templates
 
 **Key components:**
-- `ApplyModal` — full-screen modal triggered by "Want to Apply"; runs ATS on mount, then branches to Contact HM or Apply Directly (with optional cover letter generation)
+- `ApplyModal` — full-screen modal triggered by "Want to Apply"; runs ATS on mount, then branches to Contact HM or Apply Directly (with optional cover letter generation); checks profile templates before generating HR Email or LinkedIn and shows amber warning if missing
+- `MessagesSection` — expanded section within My Jobs job card; fetches profile on mount to check templates before generation; shows amber warning with link to Profile if template missing
 
 ### User Flow
 
 1. **Upload resume** → parsed text stored in DB → used for keyword matching and ATS
 2. **Upload cover letter** → stored as base template for Claude to edit per job
-3. **Fill profile** → visa status, availability, target roles; optionally set default HR email and LinkedIn templates
+3. **Fill profile** → visa status, availability, target roles; set default HR email and LinkedIn InMail templates (used by AI generation)
 4. **Search Jobs tab** → Adzuna results (paginated, with match %) + Web Results (Tavily, links to Seek/LinkedIn/Indeed)
 5. **"Want to Apply"** → saves job to My Jobs → opens Apply Modal → ATS scan runs automatically
-   - **Contact Hiring Manager** → HR Email or LinkedIn (Claude adapts your template)
+   - **Contact Hiring Manager** → HR Email or LinkedIn InMail (adapts your saved template; warns if no template set)
    - **Apply Directly** → optionally generate cover letter → Open Job Application ↗
-   - **Mark as Applied ✓** → updates status to APPLIED
-6. **My Jobs** → track all jobs; update status via dropdown; generate follow-up emails; view ATS results
-7. **Company Research** → appears at INTERVIEW_SCHEDULED+; Tavily web search + Claude briefing; saved to DB
-8. **Dashboard** → overview of entire pipeline at a glance
+   - **Mark as Applied ✓** → updates status to APPLIED and stamps applied date
+6. **Add Job manually** → "Add Job" form includes an Application Status dropdown (defaults to SAVED); selecting APPLIED stamps the applied date immediately
+7. **My Jobs** → track all jobs; click to expand full details; "See more / See less" toggle on long descriptions; update status via dropdown; generate outreach messages; view ATS results; applied date shown in green
+8. **Company Research** → appears at INTERVIEW_SCHEDULED+; Tavily web search + Claude briefing; saved to DB
+9. **Dashboard** → overview of entire pipeline at a glance
 
 ### Testing Conventions
 
