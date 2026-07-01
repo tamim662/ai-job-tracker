@@ -661,6 +661,7 @@ export default function JobsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingJob, setEditingJob] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [expandedDescIds, setExpandedDescIds] = useState(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [matchResults, setMatchResults] = useState({})
@@ -677,6 +678,14 @@ export default function JobsPage() {
 
   const handleExpand = (job) => {
     setExpandedId(expandedId === job.id ? null : job.id)
+  }
+
+  const toggleDescExpand = (jobId) => {
+    setExpandedDescIds(prev => {
+      const next = new Set(prev)
+      next.has(jobId) ? next.delete(jobId) : next.add(jobId)
+      return next
+    })
   }
 
   const handleCreate = async (form) => {
@@ -819,7 +828,18 @@ export default function JobsPage() {
                                 )}
                               </div>
                               {job.description && (
-                                <p className="text-xs text-gray-500 whitespace-pre-wrap">{job.description}</p>
+                                <div>
+                                  <p className={`text-xs text-gray-500 whitespace-pre-wrap ${expandedDescIds.has(job.id) ? '' : 'line-clamp-4'}`}>
+                                    {job.description}
+                                  </p>
+                                  {job.description.length > 200 && (
+                                    <button
+                                      onClick={e => { e.stopPropagation(); toggleDescExpand(job.id) }}
+                                      className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1 transition-colors">
+                                      {expandedDescIds.has(job.id) ? 'See less' : 'See more'}
+                                    </button>
+                                  )}
+                                </div>
                               )}
 
                               {/* Status update */}
