@@ -257,6 +257,7 @@ function MessagesSection({ jobId }) {
   const [copiedId, setCopiedId] = useState(null)
   const [profile, setProfile] = useState(null)
   const [templateWarn, setTemplateWarn] = useState(null)
+  const [expandedCoverLetters, setExpandedCoverLetters] = useState(new Set())
 
   useEffect(() => {
     api.get(`/api/jobs/${jobId}/messages`)
@@ -271,6 +272,9 @@ function MessagesSection({ jobId }) {
     try {
       const r = await api.post(`/api/jobs/${jobId}/messages`, { type })
       setMessages(prev => [r.data, ...prev])
+      if (type === 'COVER_LETTER') {
+        setExpandedCoverLetters(prev => new Set([...prev, r.data.id]))
+      }
     } catch (e) {
       setError(e.response?.data?.error || 'Generation failed. Please try again.')
     } finally { setGenerating(null) }
@@ -329,23 +333,72 @@ function MessagesSection({ jobId }) {
       {error && <p className="text-xs text-red-600">{error}</p>}
       {loaded && messages.length > 0 && (
         <div className="space-y-3">
-          {messages.map(msg => {
-            const isCoverLetter = msg.type === 'COVER_LETTER'
-            return (
-              <div key={msg.id} className={`rounded-lg border p-3 space-y-2 ${isCoverLetter ? 'bg-white border-gray-200' : 'bg-purple-50 border-purple-100'}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-semibold ${isCoverLetter ? 'text-gray-800' : 'text-purple-700'}`}>
-                    {MESSAGE_TYPES.find(t => t.type === msg.type)?.label ?? msg.type}
-                  </span>
-                  <button onClick={() => handleCopy(msg.id, msg.content)}
-                    className={`text-xs transition-colors ${isCoverLetter ? 'text-gray-500 hover:text-gray-700' : 'text-purple-600 hover:text-purple-800'}`}>
-                    {copiedId === msg.id ? 'Copied!' : 'Copy'}
-                  </button>
+          {(() => {
+            // Assign version numbers to cover letters: oldest = v1, newest = vN
+            const coverLetters = [...messages].filter(m => m.type === 'COVER_LETTER').reverse()
+            const clVersionMap = {}
+            coverLetters.forEach((m, i) => { clVersionMap[m.id] = i + 1 })
+
+            return messages.map(msg => {
+              const isCoverLetter = msg.type === 'COVER_LETTER'
+              const version = clVersionMap[msg.id]
+              const isExpanded = expandedCoverLetters.has(msg.id)
+              const toggleExpand = () => setExpandedCoverLetters(prev => {
+                const next = new Set(prev)
+                next.has(msg.id) ? next.delete(msg.id) : next.add(msg.id)
+                return next
+              })
+
+              if (isCoverLetter) {
+                return (
+                  <div key={msg.id} className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                    {/* Collapsible header */}
+                    <div
+                      className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={toggleExpand}>
+                      <span className="text-xs font-semibold text-gray-800">
+                        Cover Letter v{version}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {isExpanded && (
+                          <button
+                            onClick={e => { e.stopPropagation(); handleCopy(msg.id, msg.content) }}
+                            className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                            {copiedId === msg.id ? 'Copied!' : 'Copy'}
+                          </button>
+                        )}
+                        <span className="text-gray-400 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
+                    {/* Expandable content */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-100 px-3 pb-3 pt-2">
+                        <p
+                          className="whitespace-pre-wrap text-black"
+                          style={{ fontFamily: "'Calibri', 'Candara', 'Segoe UI', sans-serif", fontSize: '11pt', lineHeight: '1.5' }}
+                        >{msg.content}</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <div key={msg.id} className="rounded-lg border bg-purple-50 border-purple-100 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-purple-700">
+                      {MESSAGE_TYPES.find(t => t.type === msg.type)?.label ?? msg.type}
+                    </span>
+                    <button onClick={() => handleCopy(msg.id, msg.content)}
+                      className="text-xs text-purple-600 hover:text-purple-800 transition-colors">
+                      {copiedId === msg.id ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-700 whitespace-pre-wrap">{msg.content}</p>
                 </div>
-                <p className={`text-xs whitespace-pre-wrap ${isCoverLetter ? 'text-black' : 'text-gray-700'}`}>{msg.content}</p>
-              </div>
-            )
-          })}
+              )
+            })
+          })()}
         </div>
       )}
     </div>
@@ -915,7 +968,7 @@ export default function JobsPage() {
                               {job.description && (
                                 <div>
                                   <p className={`text-xs text-gray-500 whitespace-pre-wrap ${expandedDescIds.has(job.id) ? '' : 'line-clamp-4'}`}>
-                                    {job.description}
+                                    {job.description.replace(/\n{3,}/g, '\n\n')}
                                   </p>
                                   {job.description.length > 200 && (
                                     <button
