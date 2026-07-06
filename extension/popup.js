@@ -78,102 +78,128 @@ saveJobBtn.addEventListener('click', async () => {
 // Injected into the page — must be a standalone function (no closures over outer scope)
 function scrapeJobFromPage() {
   const url = window.location.href
+  const getText = (sel) => document.querySelector(sel)?.textContent?.trim() || null
+
+  // ── JSON-LD structured data (most reliable across all sites) ──────────────
+  const jsonLd = (() => {
+    try {
+      const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+      for (const s of scripts) {
+        const d = JSON.parse(s.textContent)
+        // Handle both direct JobPosting and @graph arrays
+        const posting = d['@type'] === 'JobPosting' ? d
+          : Array.isArray(d['@graph']) ? d['@graph'].find(x => x['@type'] === 'JobPosting')
+          : null
+        if (posting) return posting
+      }
+    } catch {}
+    return null
+  })()
+
+  // ── Parse document.title helper (format: "Title at Company | Site") ───────
+  const parseDocTitle = () => {
+    // Strip leading notification count "(1) " before parsing
+    const clean = document.title.replace(/^\(\d+\)\s*/, '')
+    const m = clean.match(/^(.+?)\s+at\s+(.+?)\s*[|–—-]/)
+    return m ? { title: m[1].trim(), company: m[2].trim() } : {}
+  }
+
+  // ── Strip HTML tags from a string ─────────────────────────────────────────
+  const stripHtml = (html) => html ? html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null
 
   // ── Seek ──────────────────────────────────────────────────────────────────
   if (url.includes('seek.com.au')) {
-    const title = document.querySelector('h1[data-automation="job-detail-title"]')?.innerText?.trim()
-      || document.querySelector('h1')?.innerText?.trim()
-
-    const company = document.querySelector('[data-automation="advertiser-name"]')?.innerText?.trim()
-      || document.querySelector('[data-automation="job-detail-work-type"]')?.closest('section')
-         ?.querySelector('span')?.innerText?.trim()
-
-    const location = document.querySelector('[data-automation="job-detail-location"]')?.innerText?.trim()
-
-    const salary = document.querySelector('[data-automation="job-detail-salary"]')?.innerText?.trim()
-
-    const jobType = document.querySelector('[data-automation="job-detail-work-type"]')?.innerText?.trim()
-
-    const descEl = document.querySelector('[data-automation="jobAdDetails"]')
-      || document.querySelector('.job-description')
-    const description = descEl?.innerText?.trim()
-
+    const title = getText('h1[data-automation="job-detail-title"]') || getText('h1')
+    const company = getText('[data-automation="advertiser-name"]')
+    const location = getText('[data-automation="job-detail-location"]')
+    const salary = getText('[data-automation="job-detail-salary"]')
+    const jobType = getText('[data-automation="job-detail-work-type"]')
+    const descEl = document.querySelector('[data-automation="jobAdDetails"]') || document.querySelector('.job-description')
+    const description = descEl?.textContent?.trim() || null
     return { title, company, location, salary, jobType, description, jobUrl: url, platform: 'Seek' }
   }
 
   // ── Indeed ────────────────────────────────────────────────────────────────
   if (url.includes('indeed.com')) {
-    const getText = (sel) => document.querySelector(sel)?.textContent?.trim()
-
+    // JSON-LD first
+    if (jsonLd) {
+      return {
+        title: jsonLd.title,
+        company: jsonLd.hiringOrganization?.name,
+        location: jsonLd.jobLocation?.address?.addressLocality || jsonLd.jobLocation?.address?.addressRegion,
+        salary: jsonLd.baseSalary?.value?.value || null,
+        description: stripHtml(jsonLd.description),
+        jobUrl: url,
+        platform: 'Indeed',
+      }
+    }
     const title = getText('h1[data-testid="jobsearch-JobInfoHeader-title"]')
-      || getText('h1.jobsearch-JobInfoHeader-title')
-      || getText('[class*="JobInfoHeader-title"]')
-      || getText('h1')
-
+      || getText('[class*="JobInfoHeader-title"]') || getText('h1')
     const company = getText('[data-testid="inlineHeader-companyName"] a')
-      || getText('[data-testid="inlineHeader-companyName"]')
-      || getText('[class*="companyName"] a')
-      || getText('[class*="companyName"]')
-
+      || getText('[data-testid="inlineHeader-companyName"]') || getText('[class*="companyName"]')
     const location = getText('[data-testid="job-location"]')
-      || getText('[data-testid="inlineHeader-companyLocation"]')
-      || getText('[class*="companyLocation"]')
-
-    const salary = getText('[id*="salaryInfoAndJobType"]')
-      || getText('[data-testid="attribute_snippet_testid"]')
-      || getText('[class*="salary"]')
-
+      || getText('[data-testid="inlineHeader-companyLocation"]') || getText('[class*="companyLocation"]')
+    const salary = getText('[id*="salaryInfoAndJobType"]') || getText('[class*="salary"]')
     const descEl = document.querySelector('#jobDescriptionText')
-      || document.querySelector('[id*="jobDescription"]')
-      || document.querySelector('[class*="jobDescription"]')
-    const description = descEl?.textContent?.trim()
-
+      || document.querySelector('[id*="jobDescription"]') || document.querySelector('[class*="jobDescription"]')
+    const description = descEl?.textContent?.trim() || null
     return { title, company, location, salary, description, jobUrl: url, platform: 'Indeed' }
   }
 
   // ── LinkedIn ──────────────────────────────────────────────────────────────
   if (url.includes('linkedin.com')) {
-    const getText = (sel) => document.querySelector(sel)?.textContent?.trim()
+    // 1. JSON-LD structured data — most reliable
+    if (jsonLd) {
+      return {
+        title: jsonLd.title,
+        company: jsonLd.hiringOrganization?.name,
+        location: jsonLd.jobLocation?.address?.addressLocality
+          || jsonLd.jobLocation?.address?.addressRegion
+          || jsonLd.jobLocation?.address?.addressCountry,
+        description: stripHtml(jsonLd.description),
+        jobUrl: url,
+        platform: 'LinkedIn',
+      }
+    }
 
-    // Title — LinkedIn uses various class combos; try specific then broad
-    const title = getText('.job-details-jobs-unified-top-card__job-title h1')
-      || getText('h1.job-details-jobs-unified-top-card__job-title')
-      || getText('.jobs-unified-top-card__job-title h1')
-      || getText('h1.t-24')
-      || getText('h1[class*="job"]')
-      || getText('.top-card-layout__title')
-      || getText('[class*="job-title"] h1')
-      || getText('[class*="job-title"]')
-      || getText('h1')
+    // 2. document.title: "Senior Engineer at Acme | LinkedIn"
+    const fromTitle = parseDocTitle()
 
-    // Company
-    const company = getText('.job-details-jobs-unified-top-card__company-name a')
-      || getText('.job-details-jobs-unified-top-card__company-name')
-      || getText('.jobs-unified-top-card__company-name a')
-      || getText('.topcard__org-name-link')
-      || getText('[class*="company-name"] a')
-      || getText('[class*="company-name"]')
+    // 3. Open Graph meta tags
+    const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || ''
+    const ogMatch = ogTitle.match(/^(.+?)\s+at\s+(.+?)$/)
+    const titleFromOg = ogMatch ? ogMatch[1].trim() : null
+    const companyFromOg = ogMatch ? ogMatch[2].trim() : null
+    const descFromOg = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || null
+    const descFromTwitter = document.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || null
 
-    // Location — usually the first bullet after company
-    const location = getText('.job-details-jobs-unified-top-card__primary-description-without-tagline')
-      || getText('.job-details-jobs-unified-top-card__bullet')
-      || getText('.jobs-unified-top-card__bullet')
-      || getText('.topcard__flavor--bullet')
+    // 4. DOM selectors — broad fallbacks using attribute contains
+    const title = fromTitle.title || titleFromOg
+      || getText('[class*="job-title"] h1') || getText('[class*="top-card"] h1') || getText('h1')
+
+    const company = fromTitle.company || companyFromOg
+      || getText('[class*="company-name"] a') || getText('[class*="company-name"]')
+      || getText('[class*="topcard__org"]')
+
+    const location = getText('[class*="primary-description"] [class*="bullet"]')
+      || getText('[class*="topcard__flavor--bullet"]')
       || getText('[class*="workplace-type"]')
 
-    // Description
-    const descEl = document.querySelector('.jobs-description__content .jobs-box__html-content')
-      || document.querySelector('.jobs-description-content__text')
-      || document.querySelector('.jobs-description__content')
-      || document.querySelector('.description__text--rich')
+    // 5. Description — DOM first (full text), then meta as fallback
+    const descEl = document.querySelector('[class*="description__content"] [class*="html-content"]')
+      || document.querySelector('[class*="description-content__text"]')
       || document.querySelector('[class*="description__content"]')
-      || document.querySelector('[class*="job-description"]')
-    const description = descEl?.textContent?.trim()
+      || document.querySelector('[class*="description__text"]')
+    const description = descEl?.textContent?.trim() || descFromOg || descFromTwitter
 
     return { title, company, location, description, jobUrl: url, platform: 'LinkedIn' }
   }
 
   // ── Generic fallback ──────────────────────────────────────────────────────
-  const title = document.querySelector('h1')?.innerText?.trim()
-  return { title, jobUrl: url }
+  const fromTitle = parseDocTitle()
+  return {
+    title: fromTitle.title || getText('h1'),
+    company: fromTitle.company || null,
+    jobUrl: url,
+  }
 }
