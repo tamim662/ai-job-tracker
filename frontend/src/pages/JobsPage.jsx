@@ -28,6 +28,21 @@ const EMPTY_FORM = {
   postedDate: '', closingDate: '', status: 'SAVED',
 }
 
+const PLATFORM_OPTIONS = ['Seek', 'LinkedIn', 'Indeed', 'Jora', 'CareerOne', 'GlassDoor', 'Company Career Site', 'Referral']
+const JOB_TYPE_OPTIONS = ['Full-Time', 'Part-Time', 'Contract', 'Casual', 'Internship']
+const LOCATION_SUGGESTIONS = ['Sydney, NSW', 'Melbourne, VIC', 'Brisbane, QLD', 'Perth, WA', 'Adelaide, SA', 'Canberra, ACT', 'Remote', 'Hybrid']
+
+const FILTER_GROUPS = [
+  { label: 'All', statuses: null },
+  { label: 'Saved', statuses: ['SAVED', 'RESUME_MATCHED', 'READY_TO_APPLY'] },
+  { label: 'Applied', statuses: ['APPLIED'] },
+  { label: 'HR Contacted', statuses: ['HR_CONTACTED'] },
+  { label: 'Interview', statuses: ['INTERVIEW_SCHEDULED', 'INTERVIEW_DONE'] },
+  { label: 'Offer', statuses: ['OFFER'] },
+  { label: 'Rejected', statuses: ['REJECTED'] },
+  { label: 'Closed', statuses: ['CLOSED'] },
+]
+
 function StatusBadge({ status }) {
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-500'}`}>
@@ -52,26 +67,54 @@ function JobForm({ initial = EMPTY_FORM, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial)
   const change = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
+  const inputCls = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+
   return (
     <form onSubmit={e => { e.preventDefault(); onSave(form) }} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[
-          { name: 'title', label: 'Job Title *', placeholder: 'e.g. Backend Engineer' },
-          { name: 'company', label: 'Company', placeholder: 'e.g. Acme Corp' },
-          { name: 'location', label: 'Location', placeholder: 'e.g. Sydney, NSW' },
-          { name: 'platform', label: 'Platform', placeholder: 'e.g. Seek, LinkedIn' },
-          { name: 'salary', label: 'Salary', placeholder: 'e.g. 120,000 AUD' },
-          { name: 'jobType', label: 'Job Type', placeholder: 'e.g. Full-time, Contract' },
-        ].map(({ name, label, placeholder }) => (
-          <div key={name}>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-            <input
-              name={name} value={form[name]} onChange={change} placeholder={placeholder}
-              required={name === 'title'}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        ))}
+        {/* Title */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Job Title *</label>
+          <input name="title" value={form.title} onChange={change} required
+            placeholder="e.g. Backend Engineer" className={inputCls} />
+        </div>
+        {/* Company */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>
+          <input name="company" value={form.company} onChange={change}
+            placeholder="e.g. Acme Corp" className={inputCls} />
+        </div>
+        {/* Location — datalist for suggestions, still free text */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
+          <input name="location" value={form.location} onChange={change}
+            list="location-suggestions" placeholder="e.g. Sydney, NSW" className={inputCls} />
+          <datalist id="location-suggestions">
+            {LOCATION_SUGGESTIONS.map(l => <option key={l} value={l} />)}
+          </datalist>
+        </div>
+        {/* Site / Platform — select dropdown */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Site</label>
+          <select name="platform" value={form.platform} onChange={change} className={inputCls}>
+            <option value="">Select site…</option>
+            {PLATFORM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        {/* Salary */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Salary</label>
+          <input name="salary" value={form.salary} onChange={change}
+            placeholder="e.g. 120,000 AUD" className={inputCls} />
+        </div>
+        {/* Job Type — select dropdown */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Job Type</label>
+          <select name="jobType" value={form.jobType} onChange={change} className={inputCls}>
+            <option value="">Select type…</option>
+            {JOB_TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
       </div>
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Job URL</label>
@@ -674,6 +717,7 @@ export default function JobsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [matchResults, setMatchResults] = useState({})
+  const [activeFilter, setActiveFilter] = useState(null)
 
   const load = useCallback(() =>
     api.get('/api/jobs').then(r => setJobs(r.data)).catch(() => setError('Failed to load jobs.')), [])
@@ -727,6 +771,8 @@ export default function JobsPage() {
     } catch {}
   }
 
+  const filteredJobs = activeFilter ? jobs.filter(j => activeFilter.includes(j.applicationStatus)) : jobs
+
   if (loading) return <Layout><div className="text-sm text-gray-400 py-20 text-center">Loading…</div></Layout>
 
   return (
@@ -735,7 +781,9 @@ export default function JobsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
-            <p className="text-gray-500 mt-1 text-sm">{jobs.length} saved job{jobs.length !== 1 ? 's' : ''}</p>
+            <p className="text-gray-500 mt-1 text-sm">
+              {activeFilter ? `${filteredJobs.length} of ${jobs.length}` : jobs.length} saved job{jobs.length !== 1 ? 's' : ''}
+            </p>
           </div>
           {tab === 'my-jobs' && !showForm && !editingJob && (
             <button onClick={() => setShowForm(true)}
@@ -769,13 +817,38 @@ export default function JobsPage() {
               </div>
             )}
 
+            {/* Filter chips */}
+            {!showForm && !editingJob && jobs.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {FILTER_GROUPS.map(({ label, statuses }) => {
+                  const isActive = statuses === null ? activeFilter === null : JSON.stringify(statuses) === JSON.stringify(activeFilter)
+                  const count = statuses ? jobs.filter(j => statuses.includes(j.applicationStatus)).length : jobs.length
+                  return (
+                    <button key={label}
+                      onClick={() => setActiveFilter(statuses)}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                        isActive
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600'
+                      }`}>
+                      {label} {count > 0 && <span className={`ml-1 ${isActive ? 'opacity-80' : 'text-gray-400'}`}>({count})</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {jobs.length === 0 && !showForm ? (
               <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
                 <p className="text-gray-400 text-sm">No jobs saved yet. Click <strong>+ Add Job</strong> or use <strong>Search Jobs</strong> to find roles.</p>
               </div>
+            ) : filteredJobs.length === 0 && !showForm ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+                <p className="text-gray-400 text-sm">No jobs match this filter.</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {jobs.map(job => (
+                {filteredJobs.map(job => (
                   <div key={job.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     {editingJob?.id === job.id ? (
                       <div className="p-6">
