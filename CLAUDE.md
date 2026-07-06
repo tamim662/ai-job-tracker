@@ -6,10 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Personal AI Job Tracker — a full-stack app for job searching in Australia, ATS resume matching, application tracking, HR outreach, and company research before interviews. Single-user (no registration). AI features use Anthropic Claude API (messages/cover letters/research) and Groq API (ATS scanning).
 
-**GitHub description:** AI-powered job tracker for the Australian market — ATS resume matching, tailored cover letters, HR outreach generation, and end-to-end application pipeline management.
-
-**GitHub topics:** `job-tracker` `job-search` `ats` `cover-letter-generator` `claude-ai` `spring-boot` `react` `tailwindcss` `groq` `postgresql`
-
 ## Commands
 
 ### Backend (from `backend/`)
@@ -106,7 +102,11 @@ util/         — KeywordMatcher (local keyword scoring, no API)
 
 **Single-file policy:** Uploading a new resume or cover letter auto-deletes the existing one (enforced in `ResumeService` and `CoverLetterService` via `findTopByOrderByCreatedAtDesc()`).
 
-**Message templates:** Profile stores `defaultHrEmail` and `defaultLinkedinMessage`. `MessageGenerationService` passes these as base templates to Claude when generating HR_EMAIL or LINKEDIN messages — Claude adapts them per job rather than writing from scratch. Same pattern as COVER_LETTER which uses the uploaded cover letter file. If no template is set, generation still runs but uses `[placeholders]` for missing details — it never refuses or asks for more information.
+**Message generation context:** `MessageGenerationService` injects both `ResumeRepository` and `CoverLetterRepository` and fetches the latest parsed text from each on every generation call. Context passed to Claude per type:
+- `HR_EMAIL` / `LINKEDIN` — full resume text + cover letter text (candidate background and voice) + default template from profile (tone/structure to preserve) + full JD + all profile fields (name, email, phone, LinkedIn, visa, availability, salary)
+- `COVER_LETTER` — full JD + original cover letter as style/tone reference only; Claude writes fresh content for this JD in the candidate's natural voice, not a copy-paste edit
+- `FOLLOWUP` — full JD + resume text + cover letter text + profile fields
+- If no template or cover letter is set, generation still runs using `[placeholders]` — it never refuses
 
 **Template warning (frontend):** Both `ApplyModal` and `MessagesSection` in `JobsPage` fetch the user profile on mount and check `defaultHrEmail` / `defaultLinkedinMessage` before generating. If the relevant template is missing, an amber warning banner appears with a link to `/profile` and a "Generate anyway" fallback. This check is in the frontend only — the backend always generates regardless.
 
@@ -176,15 +176,17 @@ navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })])
 **Pages/routes:**
 - `/` — Dashboard (live stats: total jobs, applied, interviews, offers; pipeline bar chart; recent jobs; quick actions; setup checklist)
 - `/jobs` — Jobs page with two tabs:
-  - **My Jobs** — saved/applied jobs with status badge, ATS score, applied date (green, when set); click to expand for: job details (salary, type, description with See more/See less toggle), ATS results, outreach messages, company research, status dropdown
+  - **My Jobs** — filter chips (All/Saved/Applied/HR Contacted/Interview/Offer/Rejected/Closed) with per-group counts; saved/applied jobs with status badge, ATS score, applied date (green, when set); click to expand for: job details (salary, type, description with See more/See less toggle), ATS results, outreach messages, company research, status dropdown; job description normalises 3+ consecutive newlines to 2 before rendering
   - **Search Jobs** — Adzuna search (paginated, 10/page) + Web Results section (Tavily, browse-only)
 - `/resumes` — Single resume management (upload/replace/remove)
 - `/cover-letters` — Single cover letter management (upload/replace/remove)
 - `/profile` — User profile including default HR email and LinkedIn InMail templates
 
+**Add Job form:** Site field is a `<select>` (Seek/LinkedIn/Indeed/Jora/CareerOne/GlassDoor/Company Career Site/Referral), Job Type is a `<select>` (Full-Time/Part-Time/Contract/Casual/Internship), Location is a free-text `<input>` with a `<datalist>` of common Australian cities + Remote/Hybrid.
+
 **Key components:**
 - `ApplyModal` — full-screen modal triggered by "Want to Apply"; runs ATS on mount, then branches to Contact HM or Apply Directly (with optional cover letter generation); checks profile templates before generating HR Email or LinkedIn and shows amber warning if missing
-- `MessagesSection` — expanded section within My Jobs job card; fetches profile on mount to check templates before generation; shows amber warning with link to Profile if template missing
+- `MessagesSection` — expanded section within My Jobs job card; fetches profile on mount to check templates before generation; shows amber warning with link to Profile if template missing; cover letter messages render in a collapsible accordion (collapsed by default, auto-expands on generation) labelled v1/v2/v3 (oldest=v1) with white background, black text, Calibri 11pt font at 1.5 line height; all other message types remain purple
 
 ### User Flow
 
@@ -197,7 +199,7 @@ navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })])
    - **Apply Directly** → optionally generate cover letter → Open Job Application ↗
    - **Mark as Applied ✓** → updates status to APPLIED and stamps applied date
 6. **Add Job manually** → "Add Job" form includes an Application Status dropdown (defaults to SAVED); selecting APPLIED stamps the applied date immediately
-7. **My Jobs** → track all jobs; click to expand full details; "See more / See less" toggle on long descriptions; update status via dropdown; generate outreach messages; view ATS results; applied date shown in green
+7. **My Jobs** → filter by status via chips; track all jobs; click to expand full details; "See more / See less" toggle on long descriptions; update status via dropdown; generate outreach messages; view ATS results; applied date shown in green; cover letters displayed as versioned collapsible cards (v1, v2…)
 8. **Company Research** → appears at INTERVIEW_SCHEDULED+; Tavily web search + Claude briefing; saved to DB
 9. **Dashboard** → overview of entire pipeline at a glance
 
