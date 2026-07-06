@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Personal AI Job Tracker — a full-stack app for job searching in Australia, ATS resume matching, application tracking, HR outreach, and company research before interviews. Single-user (no registration). AI features use Anthropic Claude API (messages/cover letters/research) and Groq API (ATS scanning).
 
+**GitHub description:** AI-powered job tracker for the Australian market — ATS resume matching, tailored cover letters, HR outreach generation, and end-to-end application pipeline management.
+
+**GitHub topics:** `job-tracker` `job-search` `ats` `cover-letter-generator` `claude-ai` `spring-boot` `react` `tailwindcss` `groq` `postgresql`
+
 ## Commands
 
 ### Backend (from `backend/`)
