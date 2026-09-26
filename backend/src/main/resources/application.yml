@@ -35,7 +35,7 @@ app:
     model: claude-sonnet-4-6
   groq:
     api-key: ${GROQ_API_KEY:}
-    model: llama-3.3-70b-versatile
+    model: ${GROQ_MODEL:openai/gpt-oss-120b}
   adzuna:
     app-id: ${ADZUNA_APP_ID:}
     app-key: ${ADZUNA_APP_KEY:}
