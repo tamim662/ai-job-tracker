@@ -51,7 +51,8 @@ All variables live in `.env` at the project root. The backend loads them at star
 | `APP_USERNAME` / `APP_PASSWORD` | Login credentials (default: admin / changeme) |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_BUCKET_NAME` / `AWS_REGION` | S3 bucket for resume/cover letter file storage (optional) |
 | `ANTHROPIC_API_KEY` | Claude API — message generation, cover letters, company research summaries |
-| `GROQ_API_KEY` | Groq API (free) — ATS scanning via Llama 3.3 70B |
+| `GROQ_API_KEY` | Groq API (free) — ATS scanning via GPT-OSS 120B |
+| `GROQ_MODEL` | Optional — overrides the Groq model (default `openai/gpt-oss-120b`); change this if Groq retires the model |
 | `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Adzuna job search API (free, Australia-specific) |
 | `TAVILY_API_KEY` | Tavily search API (free) — company research + web job search |
 
@@ -67,7 +68,7 @@ Stateless REST API, Spring Boot 3.3.4, Java 17 (compiled on 21). **68 tests pass
 
 **Auth flow:** `POST /api/auth/login` → `AuthController` → `AuthenticationManager` (in-memory single user) → returns JWT → client sends `Authorization: Bearer <token>` on every request → `JwtAuthFilter` validates and sets `SecurityContext`.
 
-Public endpoints: `/api/health`, `/api/auth/**`. Everything else requires a valid JWT.
+Public endpoints: `/api/health`, `/api/auth/**`, `/error`. Everything else requires a valid JWT. `/error` must stay public: `JwtAuthFilter` doesn't run on the error dispatch, so without it any backend exception becomes a 401 and the frontend's axios interceptor logs the user out.
 
 **Package layout:**
 ```
@@ -90,7 +91,7 @@ util/         — KeywordMatcher (local keyword scoring, no API)
 
 **External API services:**
 - `ClaudeService` — wraps Anthropic Java SDK (`com.anthropic:anthropic-java:2.34.0`). Takes systemPrompt + userMessage, returns text. Uses prompt caching (1h TTL) on the system prompt. Model: `claude-sonnet-4-6`.
-- `GroqService` — calls Groq's OpenAI-compatible API via `RestTemplate`. Model: `llama-3.3-70b-versatile`. Used for ATS scanning to save Anthropic tokens.
+- `GroqService` — calls Groq's OpenAI-compatible API via `RestTemplate`. Model: `openai/gpt-oss-120b` (via `${GROQ_MODEL}`, `max_tokens` 4096 since it spends ~900 tokens reasoning). Used for ATS scanning to save Anthropic tokens. `llama-3.3-70b-versatile` was retired by Groq (404 `model_not_found`).
 - `AdzunaService` — calls Adzuna REST API for Australian job listings. Returns `JobSearchPageDto` (paginated) with keyword match score per result via `KeywordMatcher`. Uses `build().encode().toUri()` for proper URL encoding of multi-word searches.
 - `TavilyService` — calls Tavily search API. Two methods:
   - `search(query, maxResults)` — used by `CompanyResearchService` for company research
